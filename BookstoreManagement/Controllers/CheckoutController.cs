@@ -34,6 +34,7 @@ namespace OnlineBookstoreManagement.Controllers
 
             return View(model);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(CreateOrderViewModel model)
@@ -42,6 +43,17 @@ namespace OnlineBookstoreManagement.Controllers
             if (!cart.Items.Any())
             {
                 ModelState.AddModelError("", "Your cart is empty.");
+                return View(model);
+            }
+
+            // **NEW: Validate stock availability before processing**
+            var stockValidation = await ValidateStockAvailability(cart.Items);
+            if (!stockValidation.IsValid)
+            {
+                foreach (var error in stockValidation.Errors)
+                {
+                    ModelState.AddModelError("", error);
+                }
                 return View(model);
             }
 
@@ -79,10 +91,71 @@ namespace OnlineBookstoreManagement.Controllers
             return View(order);
         }
 
+        // **NEW: Stock validation method**
+        private async Task<StockValidationResult> ValidateStockAvailability(List<CartItemViewModel> cartItems)
+        {
+            var result = new StockValidationResult { IsValid = true, Errors = new List<string>() };
+
+            foreach (var item in cartItems)
+            {
+                try
+                {
+                    var book = await _apiService.GetBookByIdAsync(item.BookId);
+                    if (book == null)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add($"Book with ID {item.BookId} not found.");
+                        continue;
+                    }
+
+                    if (book.StockQuantity < item.Quantity)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add($"Insufficient stock for '{book.Title}'. Available: {book.StockQuantity}, Requested: {item.Quantity}");
+                        continue;
+                    }
+
+                    if (book.StockQuantity == 0)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add($"'{book.Title}' is currently out of stock.");
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.IsValid = false;
+                    result.Errors.Add($"Error checking stock for book ID {item.BookId}: {ex.Message}");
+                }
+            }
+
+            return result;
+        }
+
+        // **NEW: Ajax endpoint for real-time stock checking**
+        [HttpPost]
+        public async Task<JsonResult> CheckStock()
+        {
+            var cart = GetCart();
+            var stockValidation = await ValidateStockAvailability(cart.Items);
+
+            return Json(new
+            {
+                isValid = stockValidation.IsValid,
+                errors = stockValidation.Errors
+            });
+        }
+
         private CartViewModel GetCart()
         {
             var cartJson = HttpContext.Session.GetString(CartSessionKey);
             return string.IsNullOrEmpty(cartJson) ? new CartViewModel() : JsonSerializer.Deserialize<CartViewModel>(cartJson);
         }
+    }
+
+    public class StockValidationResult
+    {
+        public bool IsValid { get; set; }
+        public List<string> Errors { get; set; } = new List<string>();
     }
 }

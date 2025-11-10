@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace OnlineBookstoreManagement.Models
 {
     public class OrderViewModel
@@ -42,18 +44,41 @@ namespace OnlineBookstoreManagement.Models
 
     public class CreateOrderViewModel
     {
-        public string? ShippingAddress { get; set; }
-        public string? ShippingCity { get; set; }
-        public string? ShippingState { get; set; }
-        public string? ShippingPostalCode { get; set; }
-        public string? ShippingCountry { get; set; }
+        [Required(ErrorMessage = "Shipping address is required")]
+        [StringLength(500, ErrorMessage = "Shipping address cannot exceed 500 characters")]
+        public string ShippingAddress { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "City is required")]
+        [StringLength(100, ErrorMessage = "City cannot exceed 100 characters")]
+        public string ShippingCity { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "State is required")]
+        [StringLength(100, ErrorMessage = "State cannot exceed 100 characters")]
+        public string ShippingState { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Postal code is required")]
+        [StringLength(20, ErrorMessage = "Postal code cannot exceed 20 characters")]
+        [RegularExpression(@"^\d{5}(-\d{4})?$", ErrorMessage = "Please enter a valid postal code (e.g., 12345 or 12345-6789)")]
+        public string ShippingPostalCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Country is required")]
+        [StringLength(100, ErrorMessage = "Country cannot exceed 100 characters")]
+        public string ShippingCountry { get; set; } = "United States";
+
+        [StringLength(1000, ErrorMessage = "Notes cannot exceed 1000 characters")]
         public string? Notes { get; set; }
+
+        [Required(ErrorMessage = "At least one item is required")]
         public List<CreateOrderItemViewModel> OrderItems { get; set; } = new List<CreateOrderItemViewModel>();
     }
 
     public class CreateOrderItemViewModel
     {
+        [Required(ErrorMessage = "Book ID is required")]
         public int BookId { get; set; }
+
+        [Required(ErrorMessage = "Quantity is required")]
+        [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
         public int Quantity { get; set; }
     }
 }

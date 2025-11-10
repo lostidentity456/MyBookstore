@@ -215,9 +215,9 @@ namespace OnlineBookstoreManagement.Services
                     return new List<OrderViewModel>();
                 }
 
-                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                SetAuthorizationHeader(token);
                 var response = await _httpClient.GetAsync("/api/orders/my-orders");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
@@ -233,6 +233,10 @@ namespace OnlineBookstoreManagement.Services
             {
                 _logger.LogError(ex, "Error retrieving orders");
                 return new List<OrderViewModel>();
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
             }
         }
 
@@ -385,6 +389,17 @@ namespace OnlineBookstoreManagement.Services
             catch
             {
                 return false;
+            }
+        }
+
+        private void SetAuthorizationHeader(string token)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
         }
 

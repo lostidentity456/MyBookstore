@@ -5,38 +5,152 @@
 
 <div class="container my-5">
     <h2 class="fw-bolder mb-4">Checkout</h2>
-    <form asp-action="Index" method="post">
+    <form asp-action="Index" method="post" id="checkoutForm">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
         <div class="row">
             <div class="col-md-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h4 class="mb-3">Order Summary</h4>
+                        <div id="cart-summary">
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-6"><strong>Subtotal:</strong></div>
+                            <div class="col-6 text-end" id="subtotal">$0.00</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Tax (8%):</strong></div>
+                            <div class="col-6 text-end" id="tax">$0.00</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Shipping:</strong></div>
+                            <div class="col-6 text-end" id="shipping">$0.00</div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-6"><h5><strong>Total:</strong></h5></div>
+                            <div class="col-6 text-end"><h5><strong id="total">$0.00</strong></h5></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h4 class="mb-3">Shipping Address</h4>
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <label asp-for="ShippingAddress" class="form-label"></label>
-                                <input asp-for="ShippingAddress" class="form-control" />
+                                <label asp-for="ShippingAddress" class="form-label">Address *</label>
+                                <input asp-for="ShippingAddress" class="form-control" placeholder="123 Main Street" />
                                 <span asp-validation-for="ShippingAddress" class="text-danger"></span>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label asp-for="ShippingCity" class="form-label"></label>
-                                <input asp-for="ShippingCity" class="form-control" />
+                                <label asp-for="ShippingCity" class="form-label">City *</label>
+                                <input asp-for="ShippingCity" class="form-control" placeholder="New York" />
                                 <span asp-validation-for="ShippingCity" class="text-danger"></span>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label asp-for="ShippingState" class="form-label"></label>
-                                <input asp-for="ShippingState" class="form-control" />
+                                <label asp-for="ShippingState" class="form-label">State *</label>
+                                <input asp-for="ShippingState" class="form-control" placeholder="NY" />
                                 <span asp-validation-for="ShippingState" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ShippingPostalCode" class="form-label">Postal Code *</label>
+                                <input asp-for="ShippingPostalCode" class="form-control" placeholder="12345" />
+                                <span asp-validation-for="ShippingPostalCode" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ShippingCountry" class="form-label">Country *</label>
+                                <select asp-for="ShippingCountry" class="form-select">
+                                    <option value="United States">United States</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="Mexico">Mexico</option>
+                                </select>
+                                <span asp-validation-for="ShippingCountry" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label asp-for="Notes" class="form-label">Special Instructions (Optional)</label>
+                                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Any special delivery instructions..."></textarea>
+                                <span asp-validation-for="Notes" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg">Place Order</button>
+                <div class="card shadow-sm sticky-top">
+                    <div class="card-body">
+                        <h5 class="card-title">Order Total</h5>
+                        <div class="d-flex justify-content-between">
+                            <span>Total:</span>
+                            <strong id="sidebar-total">$0.00</strong>
+                        </div>
+                        <hr>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="place-order-btn">
+                                <i class="fas fa-shopping-cart me-2"></i>Place Order
+                            </button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            * Free shipping on orders over $50
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCartSummary();
+
+        const form = document.getElementById('checkoutForm');
+        const submitBtn = document.getElementById('place-order-btn');
+
+        form.addEventListener('submit', function(e) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        });
+    });
+
+    function loadCartSummary() {
+        const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+        const cartSummary = document.getElementById('cart-summary');
+
+        if (cartItems.length === 0) {
+            cartSummary.innerHTML = '<p class="text-muted">No items in cart</p>';
+            return;
+        }
+
+        let subtotal = 0;
+        let html = '';
+
+        cartItems.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
+
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="flex-grow-1">
+                        <span class="fw-medium">${item.title}</span>
+                        <small class="text-muted d-block">Qty: ${item.quantity} × $${item.price.toFixed(2)}</small>
+                    </div>
+                    <span class="fw-medium">$${itemTotal.toFixed(2)}</span>
+                </div>
+            `;
+        });
+
+        cartSummary.innerHTML = html;
+
+        const tax = subtotal * 0.08;
+        const shipping = subtotal > 50 ? 0 : 5.99;
+        const total = subtotal + tax + shipping;
+
+        document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+        document.getElementById('tax').textContent = `$${tax.toFixed(2)}`;
+        document.getElementById('shipping').textContent = `$${shipping.toFixed(2)}`;
+        document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('sidebar-total').textContent = `$${total.toFixed(2)}`;
+    }
+</script>

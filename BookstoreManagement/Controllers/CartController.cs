@@ -27,11 +27,26 @@ namespace OnlineBookstoreManagement.Controllers
             var book = await _apiService.GetBookByIdAsync(bookId);
             if (book == null)
             {
-                return NotFound();
+                TempData["ErrorMessage"] = "Book not found.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (quantity <= 0)
+            {
+                TempData["ErrorMessage"] = "Quantity must be a positive number.";
+                return RedirectToAction("BookDetails", "Home", new { id = bookId });
             }
 
             var cart = GetCart();
             var cartItem = cart.Items.FirstOrDefault(i => i.BookId == bookId);
+
+            int quantityInCart = cartItem?.Quantity ?? 0;
+
+            if ((quantityInCart + quantity) > book.StockQuantity)
+            {
+                TempData["ErrorMessage"] = $"Sorry, you cannot add {quantity} more copies of '{book.Title}'. You already have {quantityInCart} in your cart, and we only have {book.StockQuantity} available.";
+                return RedirectToAction("BookDetails", "Home", new { id = bookId });
+            }
 
             if (cartItem != null)
             {
@@ -50,6 +65,42 @@ namespace OnlineBookstoreManagement.Controllers
             }
 
             SaveCart(cart);
+            TempData["SuccessMessage"] = $"Added {quantity} x '{book.Title}' to your cart.";
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public IActionResult UpdateQuantity(int bookId, int quantity)
+        {
+            var cart = GetCart();
+            var cartItem = cart.Items.FirstOrDefault(i => i.BookId == bookId);
+
+            if (cartItem != null)
+            {
+                if (quantity > 0)
+                {
+                    cartItem.Quantity = quantity;
+                }
+                else
+                {
+                    cart.Items.Remove(cartItem);
+                }
+                SaveCart(cart);
+            }
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public IActionResult RemoveFromCart(int bookId)
+        {
+            var cart = GetCart();
+            var cartItem = cart.Items.FirstOrDefault(i => i.BookId == bookId);
+            if (cartItem != null)
+            {
+                cart.Items.Remove(cartItem);
+                SaveCart(cart);
+                TempData["SuccessMessage"] = $"Removed '{cartItem.BookTitle}' from your cart.";
+            }
             return RedirectToAction("Index");
         }
 
@@ -60,7 +111,7 @@ namespace OnlineBookstoreManagement.Controllers
             {
                 return new CartViewModel();
             }
-            return JsonSerializer.Deserialize<CartViewModel>(cartJson);
+            return JsonSerializer.Deserialize<CartViewModel>(cartJson) ?? new CartViewModel();
         }
 
         private void SaveCart(CartViewModel cart)
