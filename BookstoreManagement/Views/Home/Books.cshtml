@@ -1,0 +1,68 @@
+@model BookListViewModel
+@{
+    ViewData["Title"] = "All Books";
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Books" method="get">
+            <div class="row align-items-end">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label asp-for="SearchTerm" class="form-label fw-bold">Search Books</label>
+                    <input asp-for="SearchTerm" class="form-control" placeholder="Title, author, etc..." />
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label asp-for="CategoryId" class="form-label fw-bold">Category</label>
+                    <select asp-for="CategoryId" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))" class="form-select">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-3">
+                    <label asp-for="AuthorId" class="form-label fw-bold">Author</label>
+                    <select asp-for="AuthorId" asp-items="@(new SelectList(Model.Authors, "Id", "FullName"))" class="form-select">
+                        <option value="">All Authors</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-3">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-3">
+                    <a asp-action="Books" class="btn btn-outline-secondary w-100">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Book Grid Section -->
+<div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+
+    @if (Model.Books.Any())
+    {
+        @foreach (var book in Model.Books)
+        {
+            <partial name="_BookCardPartial" model="book" />
+        }
+    }
+    else
+    {
+    <div class="col-12 text-center py-5">
+        <div class="display-1 text-muted">
+            <i class="bi bi-search"></i>
+        </div>
+        <h2 class="mt-4">No Books Found</h2>
+
+        @if (!string.IsNullOrEmpty(Model.SearchTerm))
+        {
+            <p class="lead text-muted">Your search for "@Model.SearchTerm" did not match any books.</p>
+        }
+        else
+        {
+            <p class="lead text-muted">Your filter did not match any books.</p>
+        }
+
+        <a asp-action="Books" class="btn btn-outline-primary mt-3">Clear Filter</a>
+    </div>
+    }
+</div>

@@ -1,0 +1,63 @@
+﻿@model CartViewModel
+@{
+    ViewData["Title"] = "Your Shopping Cart";
+}
+
+<div class="container px-4 px-lg-5 my-5">
+    <h2 class="fw-bolder mb-4">Shopping Cart</h2>
+
+    @if (Model.Items.Any())
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Product</th>
+                            <th style="width: 45%;"></th>
+                            <th style="width: 15%;" class="text-center">Price</th>
+                            <th style="width: 10%;" class="text-center">Quantity</th>
+                            <th style="width: 15%;" class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <img src="@(item.ImageUrl ?? "https://dummyimage.com/100x100/dee2e6/6c757d.jpg")" alt="@item.BookTitle" class="img-fluid rounded" />
+                                </td>
+                                <td>
+                                    <h5 class="fw-bolder">@item.BookTitle</h5>
+                                </td>
+                                <td class="text-center">$@item.Price.ToString("F2")</td>
+                                <td class="text-center">@item.Quantity</td>
+                                <td class="text-end fw-bold">$@item.Total.ToString("F2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end h4">Grand Total:</td>
+                            <td class="text-end h4 fw-bold">$@Model.GrandTotal.ToString("F2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="text-end mt-4">
+            <a asp-controller="Home" asp-action="Books" class="btn btn-outline-secondary">Continue Shopping</a>
+            <a asp-controller="Checkout" asp-action="Index" class="btn btn-primary">Proceed to Checkout</a>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5 border rounded bg-light">
+            <i class="bi-cart-x" style="font-size: 3rem;"></i>
+            <h3 class="text-muted mt-3">Your cart is empty</h3>
+            <p>Looks like you haven't added any books to your cart yet.</p>
+            <a asp-controller="Home" asp-action="Books" class="btn btn-primary mt-2">Browse Books</a>
+        </div>
+    }
+</div>

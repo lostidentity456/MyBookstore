@@ -1,0 +1,26 @@
+@model BookListViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center mb-4">
+    <h2 class="fw-bolder">Featured Books</h2>
+    <p class="text-muted">A selection of our most popular and recent titles</p>
+</div>
+
+<div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+
+    @if (Model.Books.Any())
+    {
+        @foreach (var book in Model.Books)
+        {
+            <partial name="_BookCardPartial" model="book" />
+        }
+    }
+    else
+    {
+        <div class="col-12 text-center">
+            <p class="text-muted">No featured books available at the moment. Check back soon!</p>
+        </div>
+    }
+</div>

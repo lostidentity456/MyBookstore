@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bookstore-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - bookstore-network
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: BookstoreManagementAPI/Dockerfile
+    container_name: bookstore-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=OnlineBookstoreDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;MultipleActiveResultSets=true
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "7001:80"
+      - "7002:443"
+    depends_on:
+      - sqlserver
+    networks:
+      - bookstore-network
+
+  # Web Application
+  web:
+    build:
+      context: .
+      dockerfile: BookstoreManagement/Dockerfile
+    container_name: bookstore-web
+    environment:
+      - ApiSettings__BaseUrl=http://api:80/api
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "7000:80"
+      - "7003:443"
+    depends_on:
+      - api
+    networks:
+      - bookstore-network
+
+volumes:
+  sqlserver_data:
+
+networks:
+  bookstore-network:
+    driver: bridge
