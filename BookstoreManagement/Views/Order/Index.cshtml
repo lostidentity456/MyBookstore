@@ -31,6 +31,14 @@
                                     <td class="text-center"><span class="badge bg-primary rounded-pill">@order.Status</span></td>
                                     <td class="text-end">
                                         <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-dark">View Details</a>
+                                        @if (order.Status == "Pending" || order.Status == "Confirmed")
+                                        {
+                                            <form asp-controller="Order" asp-action="Cancel" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@order.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger ms-2" onclick="return confirm('Cancel this order?');">Cancel</button>
+                                            </form>
+                                        }
                                     </td>
                                 </tr>
                             }

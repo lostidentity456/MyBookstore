@@ -81,4 +81,10 @@ namespace OnlineBookstoreManagement.Models
         [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
         public int Quantity { get; set; }
     }
+
+    public class UpdateOrderStatusViewModel
+    {
+        public OrderStatus Status { get; set; }
+        public string Notes { get; set; }
+    }
 }

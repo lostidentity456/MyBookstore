@@ -39,53 +39,71 @@ namespace OnlineBookstoreManagement.Controllers
             }
         }
 
-        public async Task<IActionResult> Books(string? search, int? categoryId, int? authorId, int page = 1)
+        public async Task<IActionResult> Books(string? search, int? categoryId, int? authorId, int page = 1, string? sort = null)
         {
             try
             {
-                List<BookViewModel> books;
-                
-                if (!string.IsNullOrEmpty(search))
-                {
-                    books = await _apiService.SearchBooksAsync(search);
-                }
-                else if (categoryId.HasValue)
-                {
-                    books = await _apiService.GetBooksByCategoryAsync(categoryId.Value);
-                }
-                else if (authorId.HasValue)
-                {
-                    books = await _apiService.GetBooksByAuthorAsync(authorId.Value);
-                }
-                else
-                {
-                    books = await _apiService.GetBooksAsync();
-                }
-
                 var categories = await _apiService.GetCategoriesAsync();
                 var authors = await _apiService.GetAuthorsAsync();
 
-                var model = new BookListViewModel
-                {
-                    Books = books,
-                    Categories = categories,
-                    Authors = authors,
-                    SearchTerm = search,
-                    CategoryId = categoryId,
-                    AuthorId = authorId,
-                    CurrentPage = page,
-                    PageSize = 12
-                };
+                BookListViewModel model;
 
+                if (!string.IsNullOrEmpty(search))
+                {
+                    var books = await _apiService.SearchBooksAsync(search);
+                    model = new BookListViewModel
+                    {
+                        Books = books,
+                        TotalPages = 1, 
+                        CurrentPage = 1
+                    };
+                }
+                else if (categoryId.HasValue)
+                {
+                    var books = await _apiService.GetBooksByCategoryAsync(categoryId.Value);
+                    model = new BookListViewModel
+                    {
+                        Books = books,
+                        TotalPages = 1,
+                        CurrentPage = 1
+                    };
+                }
+                else if (authorId.HasValue)
+                {
+                    var books = await _apiService.GetBooksByAuthorAsync(authorId.Value);
+                    model = new BookListViewModel
+                    {
+                        Books = books,
+                        TotalPages = 1,
+                        CurrentPage = 1
+                    };
+                }
+                else
+                {
+                    var pagedResult = await _apiService.GetBooksPagedAsync(page, 12, sort);
+                    model = new BookListViewModel
+                    {
+                        Books = pagedResult.Items,
+                        TotalPages = pagedResult.TotalPages
+                    };
+                }
+
+                model.Categories = categories;
+                model.Authors = authors;
+                model.SearchTerm = search;
+                model.CategoryId = categoryId;
+                model.AuthorId = authorId;
+                model.PageSize = 12;
                 model.CategoryList = new SelectList(categories, "Id", "Name", model.CategoryId);
                 model.AuthorList = new SelectList(authors, "Id", "FullName", model.AuthorId);
+                ViewBag.Sort = sort;
 
                 return View(model);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading books page");
-                return View(new BookListViewModel());
+                return View(new BookListViewModel()); 
             }
         }
 

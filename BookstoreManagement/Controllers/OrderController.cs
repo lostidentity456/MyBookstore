@@ -17,6 +17,29 @@ namespace OnlineBookstoreManagement.Controllers
             _logger = logger;
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            try
+            {
+                var success = await _apiService.CancelOrderAsync(id);
+                if (success)
+                {
+                    TempData["SuccessMessage"] = "Order cancelled successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Unable to cancel the order.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling order {OrderId}", id);
+                TempData["ErrorMessage"] = "An error occurred while cancelling the order.";
+            }
+            return RedirectToAction(nameof(Index));
+        }
         public async Task<IActionResult> Index()
         {
             try

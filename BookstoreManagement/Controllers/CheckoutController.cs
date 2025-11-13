@@ -70,7 +70,8 @@ namespace OnlineBookstoreManagement.Controllers
                     var createdOrder = await _apiService.CreateOrderAsync(model);
                     HttpContext.Session.Remove(CartSessionKey);
 
-                    return RedirectToAction("Confirmation", new { id = createdOrder.Id });
+                    // Redirect to payment step
+                    return RedirectToAction("Pay", "Payments", new { orderId = createdOrder.Id, amount = createdOrder.TotalAmount });
                 }
                 catch (System.Exception ex)
                 {

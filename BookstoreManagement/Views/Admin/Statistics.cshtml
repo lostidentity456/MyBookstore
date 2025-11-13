@@ -1,0 +1,41 @@
+﻿@model StatisticsDto
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container my-5">
+    <h2 class="fw-bolder mb-4">@ViewData["Title"]</h2>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Revenue</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">@Model.TotalRevenue.ToString("C")</div>
+                        </div>
+                        <div class="col-auto"><i class="fas fa-dollar-sign fa-2x text-gray-300"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.TopSellingBook != null)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header">
+                        <h5>Top Selling Book</h5>
+                    </div>
+                    <div class="card-body">
+                        <h5>@Model.TopSellingBook.Title</h5>
+                        <p>by @Model.TopSellingBook.AuthorName</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

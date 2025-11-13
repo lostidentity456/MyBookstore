@@ -1,0 +1,65 @@
+@using OnlineBookstoreManagement.Models
+@model List<OrderViewModel>
+@{
+    ViewData["Title"] = "Manage Orders";
+}
+
+<div class="container my-4">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>User</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var o in Model)
+            {
+                <tr>
+                    <td>@o.OrderNumber</td>
+                    <td>@o.UserName</td>
+                    <td>@o.TotalAmount.ToString("C")</td>
+                    <td>@o.Status</td>
+                    <td>@o.PaymentStatus</td>
+                    <td>@o.CreatedAt.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <form asp-action="UpdateOrderStatus" method="post" class="d-flex gap-2">
+                            <input type="hidden" name="id" value="@o.Id" />
+                            <select name="Status" class="form-select form-select-sm" style="width:auto;">
+                                <option value="0" selected="@(o.Status == "Pending")">Pending</option>
+                                <option value="1" selected="@(o.Status == "Confirmed")">Confirmed</option>
+                                <option value="2" selected="@(o.Status == "Processing")">Processing</option>
+                                <option value="3" selected="@(o.Status == "Shipped")">Shipped</option>
+                                <option value="4" selected="@(o.Status == "Delivered")">Delivered</option>
+                                <option value="5" selected="@(o.Status == "Cancelled")">Cancelled</option>
+                            </select>
+                            <input type="hidden" name="Notes" value="" />
+                            <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                            @Html.AntiForgeryToken()
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+

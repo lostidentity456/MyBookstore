@@ -178,6 +178,11 @@ namespace OnlineBookstoreManagementAPI.Services
 
         public async Task<IEnumerable<BookDto>> SearchBooksAsync(string searchTerm)
         {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                return new List<BookDto>();
+            }
+
             var books = await _context.Books
                 .Include(b => b.Category)
                 .Include(b => b.Author)

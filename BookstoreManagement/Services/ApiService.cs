@@ -44,6 +44,36 @@ namespace OnlineBookstoreManagement.Services
             }
         }
 
+        //public async Task<PagedResult<BookViewModel>> GetBooksPagedAsync(int page, int pageSize, string? sort)
+        //{
+        //    try
+        //    {
+        //        var url = $"/api/books?page={page}&pageSize={pageSize}" + (string.IsNullOrEmpty(sort) ? "" : $"&sort={Uri.EscapeDataString(sort)}");
+        //        var response = await _httpClient.GetAsync(url);
+        //        if (!response.IsSuccessStatusCode)
+        //        {
+        //            return new PagedResult<BookViewModel> { Items = new List<BookViewModel>(), Page = page, PageSize = pageSize, TotalItems = 0, TotalPages = 0 };
+        //        }
+        //        var content = await response.Content.ReadAsStringAsync();
+        //        var doc = JsonDocument.Parse(content);
+        //        var itemsJson = doc.RootElement.GetProperty("items").GetRawText();
+        //        var items = JsonSerializer.Deserialize<List<BookViewModel>>(itemsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<BookViewModel>();
+        //        return new PagedResult<BookViewModel>
+        //        {
+        //            Items = items,
+        //            Page = doc.RootElement.GetProperty("page").GetInt32(),
+        //            PageSize = doc.RootElement.GetProperty("pageSize").GetInt32(),
+        //            TotalItems = doc.RootElement.GetProperty("totalItems").GetInt32(),
+        //            TotalPages = doc.RootElement.GetProperty("totalPages").GetInt32()
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error retrieving paged books");
+        //        return new PagedResult<BookViewModel> { Items = new List<BookViewModel>(), Page = page, PageSize = pageSize, TotalItems = 0, TotalPages = 0 };
+        //    }
+        //}
+
         public async Task<BookViewModel?> GetBookByIdAsync(int id)
         {
             try
@@ -65,6 +95,79 @@ namespace OnlineBookstoreManagement.Services
                 _logger.LogError(ex, "Error retrieving book with ID {BookId}", id);
                 return null;
             }
+        }
+
+        public async Task<BookViewModel> CreateBookAsync(BookViewModel book)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) throw new System.UnauthorizedAccessException("User is not authenticated.");
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var createDto = new CreateBookDto
+            {
+                Title = book.Title,
+                Description = book.Description,
+                ISBN = book.ISBN,
+                Publisher = book.Publisher,
+                PublicationDate = book.PublicationDate,
+                Language = string.IsNullOrWhiteSpace(book.Language) ? "English" : book.Language,
+                NumberOfPages = book.NumberOfPages,
+                Edition = book.Edition,
+                ImageUrl = book.ImageUrl,
+                Price = book.Price,
+                DiscountPrice = book.DiscountPrice,
+                StockQuantity = book.StockQuantity,
+                MinStockLevel = 5,
+                IsActive = book.IsActive,
+                IsFeatured = book.IsFeatured,
+                CategoryId = book.CategoryId,
+                AuthorId = book.AuthorId
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("/api/books", createDto);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<BookViewModel>();
+        }
+
+        public async Task UpdateBookAsync(int id, BookViewModel book)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) throw new System.UnauthorizedAccessException("User is not authenticated.");
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var updateDto = new UpdateBookDto
+            {
+                Title = book.Title,
+                Description = book.Description,
+                ISBN = book.ISBN,
+                Publisher = book.Publisher,
+                PublicationDate = book.PublicationDate,
+                Language = string.IsNullOrWhiteSpace(book.Language) ? "English" : book.Language,
+                NumberOfPages = book.NumberOfPages,
+                Edition = book.Edition,
+                ImageUrl = book.ImageUrl,
+                Price = book.Price,
+                DiscountPrice = book.DiscountPrice,
+                StockQuantity = book.StockQuantity,
+                MinStockLevel = 5,
+                IsActive = book.IsActive,
+                IsFeatured = book.IsFeatured,
+                CategoryId = book.CategoryId,
+                AuthorId = book.AuthorId
+            };
+
+            var response = await _httpClient.PutAsJsonAsync($"/api/books/{id}", updateDto);
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task DeleteBookAsync(int id)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) throw new System.UnauthorizedAccessException("User is not authenticated.");
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.DeleteAsync($"/api/books/{id}");
+            response.EnsureSuccessStatusCode();
         }
 
         public async Task<List<BookViewModel>> SearchBooksAsync(string searchTerm)
@@ -159,6 +262,105 @@ namespace OnlineBookstoreManagement.Services
             }
         }
 
+        public async Task<(List<BookViewModel> Items, int TotalPages, int TotalItems)> GetBooksPagedAsync(int page, int pageSize, string? sort)
+        {
+            try
+            {
+                var url = $"/api/books?page={page}&pageSize={pageSize}";
+                if (!string.IsNullOrEmpty(sort))
+                {
+                    url += $"&sort={Uri.EscapeDataString(sort)}";
+                }
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return (new List<BookViewModel>(), 0, 0);
+                }
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var items = new List<BookViewModel>();
+                if (root.TryGetProperty("items", out var itemsProp) && itemsProp.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in itemsProp.EnumerateArray())
+                    {
+                        var model = JsonSerializer.Deserialize<BookViewModel>(item.GetRawText(), new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                        if (model != null) items.Add(model);
+                    }
+                }
+
+                var totalPages = root.TryGetProperty("totalPages", out var tp) ? tp.GetInt32() : 0;
+                var totalItems = root.TryGetProperty("totalItems", out var ti) ? ti.GetInt32() : 0;
+                return (items, totalPages, totalItems);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving paged books");
+                return (new List<BookViewModel>(), 0, 0);
+            }
+        }
+
+        //public async Task<PaymentDto?> CreatePaymentAsync(CreatePaymentDto dto)
+        //{
+        //    try
+        //    {
+        //        var token = GetToken();
+        //        if (string.IsNullOrEmpty(token)) return null;
+        //        SetAuthorizationHeader(token);
+        //        var response = await _httpClient.PostAsJsonAsync("/api/payments", dto);
+        //        if (!response.IsSuccessStatusCode) return null;
+        //        var json = await response.Content.ReadAsStringAsync();
+        //        return JsonSerializer.Deserialize<PaymentDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error creating payment for order {OrderId}", dto.OrderId);
+        //        return null;
+        //    }
+        //    finally
+        //    {
+        //        _httpClient.DefaultRequestHeaders.Authorization = null;
+        //    }
+        //}
+
+        //public async Task<PaymentDto?> ProcessPaymentAsync(ProcessPaymentDto dto)
+        //{
+        //    try
+        //    {
+        //        var token = GetToken();
+        //        if (string.IsNullOrEmpty(token)) return null;
+        //        SetAuthorizationHeader(token);
+        //        var response = await _httpClient.PostAsJsonAsync("/api/payments/process", dto);
+        //        if (!response.IsSuccessStatusCode) return null;
+        //        var json = await response.Content.ReadAsStringAsync();
+        //        return JsonSerializer.Deserialize<PaymentDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error processing payment {PaymentId}", dto.PaymentId);
+        //        return null;
+        //    }
+        //    finally
+        //    {
+        //        _httpClient.DefaultRequestHeaders.Authorization = null;
+        //    }
+        //}
+        public async Task<StatisticsDto> GetDashboardStatisticsAsync()
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token))
+            {
+                throw new UnauthorizedAccessException("User not authenticated");
+            }
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            return await _httpClient.GetFromJsonAsync<StatisticsDto>("/api/statistics/dashboard");
+        }
+
         public async Task<List<CategoryViewModel>> GetCategoriesAsync()
         {
             try
@@ -203,6 +405,52 @@ namespace OnlineBookstoreManagement.Services
                 _logger.LogError(ex, "Error retrieving authors");
                 return new List<AuthorViewModel>();
             }
+        }
+
+        public async Task<AuthorViewModel?> GetAuthorByIdAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/authors/{id}");
+                if (!response.IsSuccessStatusCode) return null;
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<AuthorViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving author {AuthorId}", id);
+                return null;
+            }
+        }
+
+        public async Task<bool> CreateAuthorAsync(AuthorViewModel author)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.PostAsJsonAsync("/api/authors", author);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UpdateAuthorAsync(AuthorViewModel author)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.PutAsJsonAsync($"/api/authors/{author.Id}", author);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteAuthorAsync(int id)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.DeleteAsync($"/api/authors/{id}");
+            return response.IsSuccessStatusCode;
         }
 
         public async Task<List<OrderViewModel>> GetOrdersAsync()
@@ -271,6 +519,142 @@ namespace OnlineBookstoreManagement.Services
             }
         }
 
+        public async Task<List<OrderViewModel>> GetAllOrdersAsync()
+        {
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    return new List<OrderViewModel>();
+                }
+
+                SetAuthorizationHeader(token);
+                var response = await _httpClient.GetAsync("/api/orders");
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var orders = JsonSerializer.Deserialize<List<OrderViewModel>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    return orders ?? new List<OrderViewModel>();
+                }
+                return new List<OrderViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all orders (admin)");
+                return new List<OrderViewModel>();
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        public async Task<OrderViewModel?> UpdateOrderStatusAsync(int id, UpdateOrderStatusDto dto)
+        {
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    return null;
+                }
+                SetAuthorizationHeader(token);
+                var response = await _httpClient.PutAsJsonAsync($"/api/orders/{id}/status", dto);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+                var content = await response.Content.ReadAsStringAsync();
+                var order = JsonSerializer.Deserialize<OrderViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return order;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order status for order {OrderId}", id);
+                return null;
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        public async Task<bool> CancelOrderAsync(int id)
+        {
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    return false;
+                }
+                SetAuthorizationHeader(token);
+                var response = await _httpClient.PutAsync($"/api/orders/{id}/cancel", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling order {OrderId}", id);
+                return false;
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        public async Task<CategoryViewModel?> GetCategoryByIdAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/categories/{id}");
+                if (!response.IsSuccessStatusCode) return null;
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CategoryViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving category {CategoryId}", id);
+                return null;
+            }
+        }
+
+        public async Task<bool> CreateCategoryAsync(CategoryViewModel category)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.PostAsJsonAsync("/api/categories", category);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UpdateCategoryAsync(CategoryViewModel category)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.PutAsJsonAsync($"/api/categories/{category.Id}", category);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteCategoryAsync(int id)
+        {
+            var token = GetToken();
+            if (string.IsNullOrEmpty(token)) return false;
+            SetAuthorizationHeader(token);
+            var response = await _httpClient.DeleteAsync($"/api/categories/{id}");
+            return response.IsSuccessStatusCode;
+        }
         public async Task<OrderViewModel> CreateOrderAsync(CreateOrderViewModel order)
         {
             try
@@ -379,12 +763,23 @@ namespace OnlineBookstoreManagement.Services
 
             try
             {
-                var tokenData = new { token };
-                var json = JsonSerializer.Serialize(tokenData);
+                var payload = new { token = token };
+                var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
                 var response = await _httpClient.PostAsync("/api/auth/validate", content);
-                return response.IsSuccessStatusCode;
+                if (!response.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(responseContent);
+                if (doc.RootElement.TryGetProperty("valid", out var validProp) && validProp.ValueKind == JsonValueKind.True)
+                {
+                    return true;
+                }
+                return false;
             }
             catch
             {
@@ -416,6 +811,50 @@ namespace OnlineBookstoreManagement.Services
         public void ClearToken()
         {
             _httpContextAccessor.HttpContext?.Session.Remove("AuthToken");
+        }
+
+        public async Task<PaymentDto?> CreatePaymentAsync(CreatePaymentDto dto)
+        {
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token)) return null;
+                SetAuthorizationHeader(token);
+                var response = await _httpClient.PostAsJsonAsync("/api/payments", dto);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<PaymentDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating payment for order {OrderId}", dto.OrderId);
+                return null;
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+
+        public async Task<PaymentDto?> ProcessPaymentAsync(ProcessPaymentDto dto)
+        {
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token)) return null;
+                SetAuthorizationHeader(token);
+                var response = await _httpClient.PostAsJsonAsync("/api/payments/process", dto);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<PaymentDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment {PaymentId}", dto.PaymentId);
+                return null;
+            }
+            finally
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
         }
     }
 }

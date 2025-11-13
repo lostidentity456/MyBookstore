@@ -49,7 +49,7 @@ namespace OnlineBookstoreManagementAPI.Controllers
             try
             {
                 var user = await _authService.RegisterAsync(createUserDto);
-                return CreatedAtAction(nameof(GetCurrentUser), user);
+                return Ok(user);
             }
             catch (InvalidOperationException ex)
             {
@@ -96,11 +96,16 @@ namespace OnlineBookstoreManagementAPI.Controllers
         /// Validate token
         /// </summary>
         [HttpPost("validate")]
-        public ActionResult<object> ValidateToken([FromBody] string token)
+        public ActionResult<object> ValidateToken([FromBody] TokenValidationRequest request)
         {
             try
             {
-                var isValid = _authService.ValidateToken(token);
+                if (request == null || string.IsNullOrWhiteSpace(request.Token))
+                {
+                    return BadRequest("Token is required.");
+                }
+
+                var isValid = _authService.ValidateToken(request.Token);
                 return Ok(new { valid = isValid });
             }
             catch (Exception ex)

@@ -19,15 +19,39 @@ namespace OnlineBookstoreManagementAPI.Controllers
         }
 
         /// <summary>
-        /// Get all books
+        /// Get all books with optional pagination and sorting
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BookDto>>> GetBooks()
+        public async Task<ActionResult<object>> GetBooks([FromQuery] int page = 1, [FromQuery] int pageSize = 12, [FromQuery] string? sort = null)
         {
             try
             {
+                if (page < 1) page = 1;
+                if (pageSize < 1 || pageSize > 100) pageSize = 12;
+
                 var books = await _bookService.GetAllBooksAsync();
-                return Ok(books);
+
+                books = sort switch
+                {
+                    "price_asc" => books.OrderBy(b => b.CurrentPrice).ToList(),
+                    "price_desc" => books.OrderByDescending(b => b.CurrentPrice).ToList(),
+                    "title_asc" => books.OrderBy(b => b.Title).ToList(),
+                    "title_desc" => books.OrderByDescending(b => b.Title).ToList(),
+                    _ => books
+                };
+
+                var totalItems = books.Count();
+                var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+                var items = books.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+                return Ok(new
+                {
+                    items,
+                    page,
+                    pageSize,
+                    totalItems,
+                    totalPages
+                });
             }
             catch (Exception ex)
             {
@@ -105,6 +129,11 @@ namespace OnlineBookstoreManagementAPI.Controllers
                 if (string.IsNullOrWhiteSpace(q))
                 {
                     return BadRequest("Search query cannot be empty");
+                }
+
+                if (q.Length > 100)
+                {
+                    return BadRequest("Search term is too long.");
                 }
 
                 var books = await _bookService.SearchBooksAsync(q);

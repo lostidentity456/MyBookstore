@@ -10,51 +10,79 @@
     {
         <div class="card shadow-sm">
             <div class="card-body">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Product</th>
-                            <th style="width: 45%;"></th>
-                            <th style="width: 15%;" class="text-center">Price</th>
-                            <th style="width: 10%;" class="text-center">Quantity</th>
-                            <th style="width: 15%;" class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Items)
-                        {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
                             <tr>
-                                <td>
-                                    <img src="@(item.ImageUrl ?? "https://dummyimage.com/100x100/dee2e6/6c757d.jpg")" alt="@item.BookTitle" class="img-fluid rounded" />
-                                </td>
-                                <td>
-                                    <h5 class="fw-bolder">@item.BookTitle</h5>
-                                </td>
-                                <td class="text-center">$@item.Price.ToString("F2")</td>
-                                <td class="text-center">@item.Quantity</td>
-                                <td class="text-end fw-bold">$@item.Total.ToString("F2")</td>
+                                <th style="width: 15%;">Product</th>
+                                <th style="width: 35%;"></th>
+                                <th style="width: 15%;" class="text-center">Price</th>
+                                <th style="width: 20%;" class="text-center">Quantity</th>
+                                <th style="width: 15%;" class="text-end">Total</th>
                             </tr>
-                        }
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="4" class="text-end h4">Grand Total:</td>
-                            <td class="text-end h4 fw-bold">$@Model.GrandTotal.ToString("F2")</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="Home" asp-action="BookDetails" asp-route-id="@item.BookId">
+                                            <img src="@(item.ImageUrl ?? "https://dummyimage.com/100x100/dee2e6/6c757d.jpg")" alt="@item.BookTitle" class="img-fluid rounded" />
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <h5 class="fw-bolder mb-0">
+                                            <a asp-controller="Home" asp-action="BookDetails" asp-route-id="@item.BookId" class="text-dark text-decoration-none">@item.BookTitle</a>
+                                        </h5>
+                                    </td>
+                                    <td class="text-center">$@item.Price.ToString("F2")</td>
+                                    <td class="text-center">
+                                        <form asp-action="UpdateQuantity" method="post" class="d-flex justify-content-center align-items-center">
+                                            <input type="hidden" name="bookId" value="@item.BookId" />
+                                            <input type="number" name="quantity" value="@item.Quantity" class="form-control form-control-sm text-center" style="width: 70px;" min="1" />
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary ms-2" title="Update Quantity">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        <div class="d-flex justify-content-end align-items-center">
+                                            <span>$@item.Total.ToString("F2")</span>
+                                            <form asp-action="RemoveFromCart" method="post" class="ms-3">
+                                                <input type="hidden" name="bookId" value="@item.BookId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove Item">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end h4 border-0">Grand Total:</td>
+                                <td class="text-end h4 fw-bold border-0">$@Model.GrandTotal.ToString("F2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="text-end mt-4">
-            <a asp-controller="Home" asp-action="Books" class="btn btn-outline-secondary">Continue Shopping</a>
-            <a asp-controller="Checkout" asp-action="Index" class="btn btn-primary">Proceed to Checkout</a>
+        <div class="d-flex justify-content-between mt-4">
+            <a asp-controller="Home" asp-action="Books" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Continue Shopping
+            </a>
+            <a asp-controller="Checkout" asp-action="Index" class="btn btn-primary btn-lg">
+                Proceed to Checkout <i class="bi bi-arrow-right"></i>
+            </a>
         </div>
     }
     else
     {
         <div class="text-center py-5 border rounded bg-light">
-            <i class="bi-cart-x" style="font-size: 3rem;"></i>
+            <i class="bi bi-cart-x" style="font-size: 3rem;"></i>
             <h3 class="text-muted mt-3">Your cart is empty</h3>
             <p>Looks like you haven't added any books to your cart yet.</p>
             <a asp-controller="Home" asp-action="Books" class="btn btn-primary mt-2">Browse Books</a>

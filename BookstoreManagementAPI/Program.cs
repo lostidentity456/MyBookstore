@@ -59,6 +59,7 @@ namespace OnlineBookstoreManagementAPI
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddScoped<IRecommendationService, RecommendationService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+            builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
             // Add CORS
             builder.Services.AddCors(options =>
